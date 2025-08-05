@@ -9,7 +9,11 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { User } from '../../users/entities/user.entity';
 import { Business } from '../../businesses/entities/business.entity';
-import { AdminLog } from '../entities/admin-log.entity';
+import {
+  AdminLog,
+  AdminActionType,
+  AdminTargetType,
+} from '../entities/admin-log.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { ContactMessage } from '../../contact/entities/contact-message.entity';
 import { Category } from '../../categories/entities/category.entity';
@@ -135,10 +139,11 @@ export class AdminService {
     await this.userRepository.save(user);
 
     await this.adminLogRepository.save({
-      admin_id: admin.id,
-      action: 'BAN_USER',
+      admin,
+      action_type: AdminActionType.BAN_USER,
+      target_type: AdminTargetType.USER,
       target_id: userId,
-      reason,
+      description: reason,
     });
 
     return {
@@ -199,10 +204,11 @@ export class AdminService {
     await this.businessRepository.save(business);
 
     await this.adminLogRepository.save({
-      admin_id: admin.id,
-      action: 'SUSPEND_BUSINESS',
+      admin,
+      action_type: AdminActionType.SUSPEND_BUSINESS,
+      target_type: AdminTargetType.BUSINESS,
       target_id: businessId,
-      reason,
+      description: reason,
     });
 
     return {
@@ -228,10 +234,11 @@ export class AdminService {
     await this.businessRepository.save(business);
 
     await this.adminLogRepository.save({
-      admin_id: admin.id,
-      action: 'VERIFY_BUSINESS',
+      admin,
+      action_type: AdminActionType.VERIFY_BUSINESS,
+      target_type: AdminTargetType.BUSINESS,
       target_id: businessId,
-      reason,
+      description: reason,
     });
 
     return {
