@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -11,6 +6,7 @@ import {
   UseGuards,
   ParseUUIDPipe,
   Body,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,6 +26,7 @@ import { AdminLogDto } from '../dto/admin-log.dto';
 import { Business } from '../../businesses/entities/business.entity';
 import { AdminLog } from '../entities/admin-log.entity';
 import { Pagination } from '../../common/decorators/pagination.decorator';
+import { UserFilterDto } from '../dto/user-filter.dto';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -49,20 +46,19 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('users')
-  @ApiOperation({ summary: 'Get all users' })
+  @ApiOperation({ summary: 'Get all users with filtering and sorting' })
   @ApiQuery({ type: PaginationDto })
   @ApiResponse({
     status: 200,
-    description: 'Returns list of users',
+    description: 'Returns filtered and sorted list of users',
     type: [User],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
   async getUsers(
-    @Pagination() pagination: PaginationDto,
+    @Query() filterDto: UserFilterDto,
   ): Promise<PaginatedResponse<User>> {
-    const result = await this.adminService.getUsers(pagination);
-    return result;
+    return this.adminService.getUsers(filterDto);
   }
 
   @Patch('users/:id/ban')

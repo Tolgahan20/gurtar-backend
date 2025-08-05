@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NotFoundException,
@@ -16,6 +14,7 @@ import {
   AdminTargetType,
 } from '../entities/admin-log.entity';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { UserFilterDto } from '../dto/user-filter.dto';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -47,24 +46,57 @@ export class AdminService {
     } as const;
   }
 
-  async getUsers(
-    paginationDto: PaginationDto,
-  ): Promise<PaginatedResponse<User>> {
-    const params = this.getPaginationParams(paginationDto);
+  async getUsers(filterDto: UserFilterDto): Promise<PaginatedResponse<User>> {
+    const {
+      page = 1,
+      limit = 10,
+      role,
+      is_banned,
+      search,
+      sort,
+      order = 'DESC',
+    } = filterDto;
+    const skip = (page - 1) * limit;
 
-    const [users, total] = await this.userRepository.findAndCount({
-      skip: params.skip,
-      take: params.take,
-      order: { createdAt: 'DESC' },
-    });
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    // Apply filters
+    if (role) {
+      queryBuilder.andWhere('user.role = :role', { role });
+    }
+
+    if (typeof is_banned === 'boolean') {
+      queryBuilder.andWhere('user.is_banned = :is_banned', { is_banned });
+    }
+
+    // Apply search
+    if (search) {
+      queryBuilder.andWhere(
+        '(user.email ILIKE :search OR user.full_name ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Apply sorting
+    if (sort) {
+      queryBuilder.orderBy(`user.${sort}`, order);
+    } else {
+      queryBuilder.orderBy('user.createdAt', 'DESC');
+    }
+
+    // Get paginated results
+    const [users, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     return {
       data: users,
       meta: {
         total,
-        page: params.page,
-        limit: params.limit,
-        totalPages: Math.ceil(total / params.limit),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
     };
   }

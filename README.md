@@ -485,7 +485,26 @@ interface LeaderboardResponse {
 ### Endpoints
 
 #### `GET /api/v1/admin/users`
-List all users (admin only).
+List all users with filtering, sorting, and searching capabilities (admin only).
+```typescript
+interface UserFilterDto extends PaginationDto {
+  // Filtering
+  role?: 'user' | 'business_owner' | 'worker' | 'admin';
+  is_banned?: boolean;
+  
+  // Searching
+  search?: string; // Searches in email and full_name
+  
+  // Sorting
+  sort?: 'createdAt' | 'email' | 'full_name' | 'role';
+  order?: 'ASC' | 'DESC';
+}
+
+// Example requests:
+GET /api/v1/admin/users?page=1&limit=10
+GET /api/v1/admin/users?role=admin&is_banned=false
+GET /api/v1/admin/users?search=john&sort=email&order=asc
+```
 
 #### `PATCH /api/v1/admin/users/:id/ban`
 Ban/unban user (admin only).

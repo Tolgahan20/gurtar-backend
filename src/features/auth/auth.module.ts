@@ -26,9 +26,9 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get('jwt.secret'),
+        secret: configService.get('JWT_ACCESS_TOKEN_SECRET'),
         signOptions: {
-          expiresIn: configService.get('jwt.accessTokenExpiration'),
+          expiresIn: configService.get('JWT_ACCESS_TOKEN_EXPIRES_IN'),
         },
       }),
     }),
