@@ -1,4 +1,4 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Business } from '../../businesses/entities/business.entity';
@@ -26,6 +26,22 @@ export class Category extends BaseEntity {
   })
   @Column({ type: 'uuid', nullable: true })
   parent_id!: string | null;
+
+  @ApiProperty({
+    description: 'Parent category',
+    type: () => Category,
+    nullable: true,
+  })
+  @ManyToOne(() => Category, (category) => category.subcategories)
+  @JoinColumn({ name: 'parent_id' })
+  parent?: Category;
+
+  @ApiProperty({
+    description: 'Subcategories',
+    type: () => [Category],
+  })
+  @OneToMany(() => Category, (category) => category.parent)
+  subcategories?: Category[];
 
   @ApiProperty({
     description: 'Businesses in this category',

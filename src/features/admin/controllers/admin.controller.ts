@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Body,
   Query,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,6 +17,7 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 import { JwtBlacklistGuard } from '../../auth/guards/jwt-blacklist.guard';
 import { AdminService } from '../services/admin.service';
 import { GetUser } from '../../auth/decorators/get-user.decorator';
@@ -30,6 +32,7 @@ import { BusinessFilterDto } from '../dto/business-filter.dto';
 import { LogFilterDto } from '../dto/log-filter.dto';
 import { BusinessOrdersFilterDto } from '../dto/business-orders-filter.dto';
 import { Order } from '../../orders/entities/order.entity';
+import { DashboardStatsDto } from '../dto/dashboard-stats.dto';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -47,6 +50,121 @@ interface PaginatedResponse<T> {
 @ApiBearerAuth()
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
+  @Get('dashboard/stats/export')
+  @ApiOperation({ summary: 'Export dashboard statistics' })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: Date,
+    description: 'Start date for filtering statistics (ISO string)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: Date,
+    description: 'End date for filtering statistics (ISO string)',
+  })
+  @ApiQuery({
+    name: 'format',
+    required: false,
+    type: String,
+    enum: ['csv', 'json', 'excel'],
+    description: 'Export format (csv, json, or excel)',
+    default: 'csv',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns dashboard statistics in the requested format',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
+  async exportDashboardStats(
+    @Res() res: Response,
+    @Query('format') format: 'csv' | 'json' | 'excel' = 'csv',
+    @Query('startDate') startDateStr?: string,
+    @Query('endDate') endDateStr?: string,
+  ): Promise<void> {
+    const start = startDateStr ? new Date(startDateStr) : undefined;
+    const end = endDateStr ? new Date(endDateStr) : undefined;
+    const stats = await this.adminService.getDashboardStats(start, end);
+
+    let dateStr = 'all_time';
+    if (startDateStr && endDateStr) {
+      const startDate = new Date(startDateStr);
+      const endDate = new Date(endDateStr);
+      dateStr = `${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}`;
+    }
+
+    const filename = `dashboard_stats_${dateStr}`;
+
+    switch (format) {
+      case 'json': {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename=${filename}.json`,
+        );
+        res.send(JSON.stringify(stats, null, 2));
+        break;
+      }
+
+      case 'excel': {
+        const workbook = await this.adminService.generateExcelReport(stats);
+        res.setHeader(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename=${filename}.xlsx`,
+        );
+        await workbook.xlsx.write(res);
+        break;
+      }
+
+      default: {
+        const csv = await this.adminService.generateCsvReport(stats);
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename=${filename}.csv`,
+        );
+        res.send(csv);
+        break;
+      }
+    }
+  }
+
+  @Get('dashboard/stats')
+  @ApiOperation({ summary: 'Get dashboard statistics' })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: Date,
+    description: 'Start date for filtering statistics (ISO string)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: Date,
+    description: 'End date for filtering statistics (ISO string)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns dashboard statistics',
+    type: DashboardStatsDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
+  async getDashboardStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<DashboardStatsDto> {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return await this.adminService.getDashboardStats(start, end);
+  }
 
   @Get('users')
   @ApiOperation({ summary: 'Get all users with filtering and sorting' })

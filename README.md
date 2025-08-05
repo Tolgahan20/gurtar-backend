@@ -1,712 +1,169 @@
-# Gurtar Backend API Documentation
+# Gurtar Backend
 
-## 🌍 Overview
+A NestJS-based backend service for the Gurtar platform, focusing on eco-friendly food ordering and sustainability metrics.
 
-Gurtar is a food waste reduction marketplace inspired by "Too Good To Go". The platform connects users with businesses that have surplus food, offering these items at a discounted price through surprise boxes.
+## Features
 
-## 🔑 Authentication
+### Authentication
+- JWT-based authentication
+- Google OAuth integration
+- Role-based access control (Admin, User)
+- Token blacklisting and refresh token support
 
-### Endpoints
+### User Management
+- User registration and profile management
+- Email verification
+- Password reset functionality
+- User activity tracking
+- Eco-level progression system
 
-#### `POST /api/v1/auth/register`
-Register a new user.
-```typescript
-interface RegisterDto {
-  email: string;
-  password: string;
-  full_name: string;
-  phone_number: string;
-  profile_image_url: string;
-}
+### Business Management
+- Business registration and verification
+- Business profile management
+- Business categories and locations
+- Business performance metrics
 
-interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-}
+### Order Management
+- Order creation and tracking
+- Order status updates
+- CO2 savings calculation
+- Money savings tracking
+
+### Admin Dashboard
+- Comprehensive statistics and metrics
+- Data export functionality (CSV, Excel, JSON)
+- Real-time monitoring capabilities
+
+#### Dashboard Statistics
+1. User Statistics
+   - Total, active, and inactive users
+   - User retention rate
+   - Average login frequency
+   - User growth trends
+   - User engagement metrics
+
+2. Business Statistics
+   - Total, active, and verified businesses
+   - Business distribution by city
+   - Average response times
+   - Performance metrics
+   - Growth trends
+
+3. Order Statistics
+   - Total orders
+   - Peak hours and days
+   - Average order values
+   - Growth trends
+   - Seasonal patterns
+
+4. Environmental Impact
+   - Total CO2 emissions saved
+   - CO2 savings per business/user
+   - Money saved through eco-friendly choices
+   - Impact trends and projections
+
+5. Customer Satisfaction
+   - Average ratings
+   - Response time metrics
+   - Satisfaction trends
+   - Rating distribution
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v16 or higher)
+- PostgreSQL
+- Redis (for caching)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/gurtar-backend.git
+cd gurtar-backend
 ```
 
-#### `POST /api/v1/auth/login`
-Login with email and password.
-```typescript
-interface LoginDto {
-  email: string;
-  password: string;
-}
+2. Install dependencies:
+```bash
+npm install
 ```
 
-#### `GET /api/v1/auth/google`
-Initiate Google OAuth login.
-
-#### `GET /api/v1/auth/google/callback`
-Handle Google OAuth callback.
-
-#### `POST /api/v1/auth/refresh`
-Refresh access token.
-```typescript
-interface RefreshTokenDto {
-  refresh_token: string;
-}
+3. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
-#### `POST /api/v1/auth/logout`
-Logout user (requires authentication).
-
-#### `GET /api/v1/auth/verify/:token`
-Verify email address.
-
-## 👤 Users
-
-### Endpoints
-
-#### `GET /api/v1/users/me`
-Get current user profile (requires authentication).
-```typescript
-interface User {
-  id: string;
-  email: string;
-  full_name: string;
-  phone_number: string;
-  profile_image_url: string;
-  birthday?: Date;
-  gender?: 'male' | 'female' | 'other';
-  role: 'user' | 'business_owner' | 'worker' | 'admin';
-  is_premium: boolean;
-  is_banned: boolean;
-  eco_score: number;
-  eco_level: 'beginner' | 'saver' | 'champion' | 'eco_hero';
-  total_co2_saved: number;
-  total_money_saved: number;
-  total_orders: number;
-}
+4. Run database migrations:
+```bash
+npm run migration:run
 ```
 
-#### `PATCH /api/v1/users/me`
-Update current user profile (requires authentication).
-```typescript
-interface UpdateUserDto {
-  full_name?: string;
-  phone_number?: string;
-  profile_image_url?: string;
-  birthday?: Date;
-  gender?: 'male' | 'female' | 'other';
-}
+5. Start the development server:
+```bash
+npm run start:dev
 ```
 
-#### `DELETE /api/v1/users/me`
-Delete current user account (requires authentication).
+### API Documentation
 
-## 🏢 Businesses
+The API documentation is available at `/api/docs` when running the server. It includes:
+- Endpoint descriptions
+- Request/response examples
+- Authentication requirements
+- Schema definitions
 
-### Endpoints
+## Admin Dashboard API
 
-#### `POST /api/v1/businesses`
-Create a new business (requires business_owner role).
-```typescript
-interface CreateBusinessDto {
-  name: string;
-  description: string;
-  phone_number: string;
-  email: string;
-  address: string;
-  city: string;
-  country: string;
-  postal_code: string;
-  category_id: string;
-  logo_url: string;
-  cover_image_url: string;
-}
+### Statistics Endpoints
+
+1. Get Dashboard Statistics
+```bash
+GET /api/v1/admin/dashboard/stats
 ```
+Query Parameters:
+- `startDate`: Start date for filtering (ISO string)
+- `endDate`: End date for filtering (ISO string)
 
-#### `GET /api/v1/businesses/:id`
-Get business details.
-```typescript
-interface Business {
-  id: string;
-  name: string;
-  description: string;
-  phone_number: string;
-  email: string;
-  address: string;
-  city: string;
-  country: string;
-  postal_code: string;
-  category_id: string;
-  logo_url: string;
-  cover_image_url: string;
-  is_verified: boolean;
-  is_active: boolean;
-  owner: User;
-  created_at: Date;
-  updated_at: Date;
-}
+2. Export Dashboard Data
+```bash
+GET /api/v1/admin/dashboard/stats/export
 ```
+Query Parameters:
+- `startDate`: Start date for filtering (ISO string)
+- `endDate`: End date for filtering (ISO string)
+- `format`: Export format ('csv', 'json', or 'excel')
 
-#### `GET /api/v1/businesses`
-List businesses with pagination.
-```typescript
-interface PaginationDto {
-  page?: number; // default: 1
-  limit?: number; // default: 10, max: 100
-}
+### Data Export Formats
 
-interface PaginatedResponse<T> {
-  data: T[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-}
-```
+1. CSV Format
+   - Simple, tabular format
+   - Easy to import into spreadsheet software
+   - Includes all basic metrics
 
-#### `PATCH /api/v1/businesses/:id`
-Update business details (requires ownership or admin role).
-```typescript
-interface UpdateBusinessDto {
-  name?: string;
-  description?: string;
-  phone_number?: string;
-  email?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  postal_code?: string;
-  logo_url?: string;
-  cover_image_url?: string;
-}
-```
+2. Excel Format
+   - Multiple worksheets for different metric categories
+   - Formatted cells and styling
+   - Data validation
+   - Easy to read and analyze
 
-#### `DELETE /api/v1/businesses/:id`
-Delete business (requires ownership or admin role).
+3. JSON Format
+   - Complete data structure
+   - Suitable for programmatic processing
+   - Includes all available metrics
 
-## 👷 Workers
+## Contributing
 
-### Endpoints
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-#### `POST /api/v1/businesses/:id/workers`
-Add a worker to business (requires business ownership).
-```typescript
-interface CreateWorkerDto {
-  user_id: string;
-}
-```
+## License
 
-#### `GET /api/v1/businesses/:id/workers`
-List business workers (requires business relationship).
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-#### `DELETE /api/v1/workers/:id`
-Remove worker (requires business ownership).
+## Contact
 
-## 📚 Categories
-
-### Endpoints
-
-#### `GET /api/v1/categories`
-List all categories.
-```typescript
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  parent_id?: string;
-}
-```
-
-#### `GET /api/v1/categories/:id/subcategories`
-List subcategories of a category.
-
-#### `POST /api/v1/categories`
-Create a category (admin only).
-```typescript
-interface CreateCategoryDto {
-  name: string;
-  description: string;
-  parent_id?: string;
-}
-```
-
-#### `PUT /api/v1/categories/:id`
-Update a category (admin only).
-
-#### `DELETE /api/v1/categories/:id`
-Delete a category (admin only).
-
-## 📦 Packages
-
-### Endpoints
-
-#### `POST /api/v1/packages`
-Create a new package (requires business ownership).
-```typescript
-interface CreatePackageDto {
-  name: string;
-  description: string;
-  image_url: string;
-  original_price: number;
-  price: number;
-  estimated_weight: number;
-  quantity_available: number;
-  pickup_start_time: string;
-  pickup_end_time: string;
-  category_id: string;
-  subcategory_id?: string;
-  allergens: string[];
-}
-```
-
-#### `GET /api/v1/packages`
-List available packages with pagination.
-```typescript
-interface Package {
-  id: string;
-  name: string;
-  description: string;
-  image_url: string;
-  original_price: number;
-  price: number;
-  estimated_weight: number;
-  quantity_available: number;
-  pickup_start_time: Date;
-  pickup_end_time: Date;
-  allergens: string[];
-  is_active: boolean;
-  business: Business;
-  category: Category;
-  subcategory?: Category;
-}
-```
-
-#### `GET /api/v1/packages/:id`
-Get package details.
-
-#### `PATCH /api/v1/packages/:id`
-Update package (requires business ownership).
-```typescript
-interface UpdatePackageDto {
-  name?: string;
-  description?: string;
-  image_url?: string;
-  original_price?: number;
-  price?: number;
-  estimated_weight?: number;
-  quantity_available?: number;
-  pickup_start_time?: string;
-  pickup_end_time?: string;
-  category_id?: string;
-  subcategory_id?: string;
-  allergens?: string[];
-  is_active?: boolean;
-}
-```
-
-#### `DELETE /api/v1/packages/:id`
-Delete package (requires business ownership).
-
-## ⭐ Favorites
-
-### Endpoints
-
-#### `POST /api/v1/favorites`
-Add business to favorites.
-```typescript
-interface CreateFavoriteDto {
-  business_id: string;
-}
-```
-
-#### `GET /api/v1/favorites`
-List user's favorite businesses.
-
-#### `DELETE /api/v1/favorites/:id`
-Remove business from favorites.
-
-## 🛒 Orders
-
-### Endpoints
-
-#### `POST /api/v1/orders`
-Create a new order.
-```typescript
-interface CreateOrderDto {
-  package_id: string;
-  quantity: number;
-}
-
-interface Order {
-  id: string;
-  quantity: number;
-  total_price: number;
-  money_saved: number;
-  co2_saved_kg: number;
-  status: 'pending' | 'confirmed' | 'picked_up' | 'cancelled';
-  user: User;
-  package: Package;
-  picked_up_by_worker?: User;
-}
-```
-
-#### `GET /api/v1/orders`
-List user's orders.
-
-#### `GET /api/v1/orders/:id`
-Get order details.
-
-#### `PATCH /api/v1/orders/:id`
-Update order status.
-```typescript
-interface UpdateOrderStatusDto {
-  status: 'pending' | 'confirmed' | 'picked_up' | 'cancelled';
-}
-```
-
-## 🌟 Campaigns
-
-### Endpoints
-
-#### `POST /api/v1/campaigns`
-Create a new campaign (requires business ownership).
-```typescript
-interface CreateCampaignDto {
-  title: string;
-  description: string;
-  discount_type: 'percentage' | 'fixed';
-  discount_value: number;
-  start_date: string;
-  end_date: string;
-}
-```
-
-#### `GET /api/v1/campaigns`
-List active campaigns.
-```typescript
-interface Campaign {
-  id: string;
-  title: string;
-  description: string;
-  discount_type: 'percentage' | 'fixed';
-  discount_value: number;
-  start_date: Date;
-  end_date: Date;
-  is_active: boolean;
-  business: Business;
-}
-```
-
-#### `PATCH /api/v1/campaigns/:id`
-Update campaign (requires business ownership).
-```typescript
-interface UpdateCampaignDto {
-  title?: string;
-  description?: string;
-  discount_type?: 'percentage' | 'fixed';
-  discount_value?: number;
-  start_date?: string;
-  end_date?: string;
-  is_active?: boolean;
-}
-```
-
-#### `DELETE /api/v1/campaigns/:id`
-Delete campaign (requires business ownership).
-
-## 📊 Reviews & Ratings
-
-### Endpoints
-
-#### `POST /api/v1/ratings`
-Rate a business.
-```typescript
-interface CreateRatingDto {
-  business_id: string;
-  rating: number; // 1-5
-}
-```
-
-#### `GET /api/v1/ratings/business/:id`
-Get business ratings.
-
-#### `POST /api/v1/reviews`
-Review a business (requires prior rating).
-```typescript
-interface CreateReviewDto {
-  business_id: string;
-  content: string; // min length: 10
-}
-```
-
-#### `GET /api/v1/reviews/business/:id`
-Get business reviews.
-
-## 🎮 Gamification
-
-### Endpoints
-
-#### `GET /api/v1/gamification/badges`
-Get user's earned badges.
-```typescript
-interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  trigger_type: 'order_count' | 'money_saved' | 'co2_saved' | 'referrals' | 'weekly_orders' | 'monthly_streak';
-  trigger_value: number;
-}
-
-interface UserBadge {
-  id: string;
-  user: User;
-  badge: Badge;
-  earned_at: Date;
-}
-```
-
-#### `GET /api/v1/gamification/leaderboard/:type`
-Get leaderboard by type.
-```typescript
-type LeaderboardType = 'weekly_co2' | 'monthly_orders' | 'total_money_saved' | 'total_co2_saved';
-
-interface LeaderboardEntry {
-  user: User;
-  value: number;
-  rank: number;
-}
-
-interface LeaderboardResponse {
-  leaderboard: LeaderboardEntry[];
-  userRank?: LeaderboardEntry;
-}
-```
-
-## 👑 Admin
-
-### Endpoints
-
-#### `GET /api/v1/admin/users`
-List all users with filtering, sorting, and searching capabilities (admin only).
-```typescript
-interface UserFilterDto extends PaginationDto {
-  // Filtering
-  role?: 'user' | 'business_owner' | 'worker' | 'admin';
-  is_banned?: boolean;
-  
-  // Searching
-  search?: string; // Searches in email and full_name
-  
-  // Sorting
-  sort?: 'createdAt' | 'email' | 'full_name' | 'role';
-  order?: 'ASC' | 'DESC';
-}
-
-// Example requests:
-GET /api/v1/admin/users?page=1&limit=10
-GET /api/v1/admin/users?role=admin&is_banned=false
-GET /api/v1/admin/users?search=john&sort=email&order=asc
-```
-
-#### `GET /api/v1/admin/businesses`
-List all businesses with filtering, sorting, and searching capabilities (admin only).
-```typescript
-interface BusinessFilterDto extends PaginationDto {
-  // Filtering
-  is_verified?: boolean;
-  is_active?: boolean;
-  city?: string;
-  
-  // Searching
-  search?: string; // Searches in name, description, email, and city
-  
-  // Sorting
-  sort?: 'createdAt' | 'name' | 'city' | 'is_verified';
-  order?: 'ASC' | 'DESC';
-}
-
-// Example requests:
-GET /api/v1/admin/businesses?page=1&limit=10
-GET /api/v1/admin/businesses?is_verified=true&city=Istanbul
-GET /api/v1/admin/businesses?search=cafe&sort=name&order=asc
-```
-
-#### `GET /api/v1/admin/businesses/:id/orders`
-Get all orders for a specific business with filtering and sorting capabilities (admin only).
-```typescript
-interface BusinessOrdersFilterDto extends PaginationDto {
-  // Filtering
-  status?: 'pending' | 'confirmed' | 'picked_up' | 'cancelled';
-  
-  // Sorting
-  sort?: 'createdAt' | 'status' | 'total_price' | 'quantity';
-  order?: 'ASC' | 'DESC';
-}
-
-// Response includes:
-interface Order {
-  id: string;
-  quantity: number;
-  total_price: number;
-  money_saved: number;
-  co2_saved_kg: number;
-  status: OrderStatus;
-  user: User;           // Customer details
-  package: Package;     // Package details
-  picked_up_by_worker?: User; // Worker who handled pickup
-}
-
-// Example requests:
-GET /api/v1/admin/businesses/:id/orders?page=1&limit=10
-GET /api/v1/admin/businesses/:id/orders?status=pending
-GET /api/v1/admin/businesses/:id/orders?sort=total_price&order=desc
-```
-
-#### `GET /api/v1/admin/logs`
-Get admin action logs with filtering, sorting, and searching capabilities (admin only).
-```typescript
-interface LogFilterDto extends PaginationDto {
-  // Filtering
-  action_type?: 'VERIFY_BUSINESS' | 'SUSPEND_BUSINESS' | /* other actions */;
-  target_type?: 'USER' | 'BUSINESS' | /* other targets */;
-  
-  // Searching
-  search?: string; // Searches in description
-  
-  // Sorting
-  sort?: 'createdAt' | 'action_type' | 'target_type';
-  order?: 'ASC' | 'DESC';
-}
-
-// Example requests:
-GET /api/v1/admin/logs?page=1&limit=10
-GET /api/v1/admin/logs?action_type=VERIFY_BUSINESS
-GET /api/v1/admin/logs?search=verification&sort=createdAt&order=desc
-```
-
-#### `PATCH /api/v1/admin/users/:id/ban`
-Ban/unban user (admin only).
-```typescript
-interface AdminLogDto {
-  reason: string;
-}
-```
-
-#### `PATCH /api/v1/admin/businesses/:id/verify`
-Verify/unverify business (admin only).
-```typescript
-interface AdminLogDto {
-  reason: string;
-}
-```
-
-#### `PATCH /api/v1/admin/businesses/:id/toggle-status`
-Activate/deactivate business (admin only). This endpoint provides functionality similar to banning a business.
-```typescript
-interface AdminLogDto {
-  reason: string;
-}
-```
-
-### Business Status Management
-Businesses have two status flags that can be managed by admins:
-- `is_verified`: Indicates that the admin has reviewed and approved the business
-- `is_active`: Controls whether the business can operate (similar to a ban feature)
-
-## 📨 Contact
-
-### Endpoints
-
-#### `POST /api/v1/contact`
-Send a contact message.
-```typescript
-interface CreateContactMessageDto {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
-```
-
-#### `GET /api/v1/admin/contacts`
-List contact messages (admin only).
-
-#### `PATCH /api/v1/admin/contacts/:id/resolve`
-Mark contact message as resolved (admin only).
-```typescript
-interface UpdateContactStatusDto {
-  is_resolved: boolean;
-}
-```
-
-## 🔒 Authentication Headers
-
-For protected endpoints, include the JWT token in the Authorization header:
-```
-Authorization: Bearer <access_token>
-```
-
-## 📝 Common Response Formats
-
-### Success Response
-```typescript
-interface SuccessResponse<T> {
-  data: T;
-  meta?: {
-    total?: number;
-    page?: number;
-    limit?: number;
-    totalPages?: number;
-  };
-}
-```
-
-### Error Response
-```typescript
-interface ErrorResponse {
-  statusCode: number;
-  message: string | string[];
-  error: string;
-}
-```
-
-## 🔄 Pagination
-Most list endpoints support pagination:
-```typescript
-// Request
-GET /api/v1/endpoint?page=1&limit=10
-
-// Response
-{
-  "data": [...],
-  "meta": {
-    "total": 100,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 10
-  }
-}
-```
-
-## 🎯 Role-Based Access
-- `user`: Basic authenticated user
-- `business_owner`: Can manage business and packages
-- `worker`: Can handle orders and pickups
-- `admin`: Full system access
-
-## 🏆 Gamification Levels
-```typescript
-enum EcoLevel {
-  BEGINNER = 'beginner',    // 0-10 kg CO2
-  SAVER = 'saver',          // 11-30 kg CO2
-  CHAMPION = 'champion',    // 31-75 kg CO2
-  ECO_HERO = 'eco_hero',   // 75+ kg CO2
-}
-```
-
-## 🎖️ Badges
-1. 🥇 First Saver: Place your first order
-2. 🔟 10 Rescues: Complete 10 orders
-3. 💸 €100 Saved: Save over €100 total
-4. 🌱 Eco Hero: Save over 50kg CO2
-5. 📦 Weekly Saver: Rescue 3+ meals in a single week
-6. 🧑‍🤝‍🧑 Community Hero: Invite 5+ friends who order
-7. 🕰️ Loyal Rescuer: Order every month for 3 months
+Your Name - your.email@example.com
+Project Link: https://github.com/yourusername/gurtar-backend

@@ -7,6 +7,7 @@ import {
   Param,
   UseGuards,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,7 +15,6 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtBlacklistGuard } from '../../auth/guards/jwt-blacklist.guard';
 import { AdminGuard } from '../../admin/guards/admin.guard';
@@ -24,8 +24,7 @@ import { User } from '../../users/entities/user.entity';
 import { ContactMessage } from '../entities/contact-message.entity';
 import { CreateContactMessageDto } from '../dto/create-contact-message.dto';
 import { UpdateContactStatusDto } from '../dto/update-contact-status.dto';
-import { Pagination } from '../../common/decorators/pagination.decorator';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { ContactFilterDto } from '../dto/contact-filter.dto';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -60,20 +59,19 @@ export class ContactController {
   @Get('admin')
   @UseGuards(JwtBlacklistGuard, AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all contact messages (Admin)' })
-  @ApiQuery({ type: PaginationDto })
+  @ApiOperation({ summary: 'Get all contact messages with filtering and sorting (Admin)' })
   @ApiResponse({
     status: 200,
-    description: 'Returns list of contact messages',
+    description: 'Returns filtered and sorted list of contact messages',
     type: [ContactMessage],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
   async findAll(
     @GetUser() user: User,
-    @Pagination() pagination: PaginationDto,
+    @Query() filterDto: ContactFilterDto,
   ): Promise<PaginatedResponse<ContactMessage>> {
-    return this.contactService.findAll(user, pagination);
+    return this.contactService.findAll(user, filterDto);
   }
 
   @Patch('admin/:id/resolve')

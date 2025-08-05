@@ -10,7 +10,7 @@ import { User } from '../../users/entities/user.entity';
 import { UserRole } from '../../users/entities/user-role.enum';
 import { CreateContactMessageDto } from '../dto/create-contact-message.dto';
 import { UpdateContactStatusDto } from '../dto/update-contact-status.dto';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { ContactFilterDto } from '../dto/contact-filter.dto';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -29,15 +29,6 @@ export class ContactService {
     private readonly contactMessageRepository: Repository<ContactMessage>,
   ) {}
 
-  private getPaginationParams(dto: PaginationDto) {
-    return {
-      skip: (dto.page - 1) * dto.limit,
-      take: dto.limit,
-      page: dto.page,
-      limit: dto.limit,
-    } as const;
-  }
-
   async create(
     createContactMessageDto: CreateContactMessageDto,
     currentUser?: User,
@@ -52,28 +43,59 @@ export class ContactService {
 
   async findAll(
     currentUser: User,
-    paginationDto: PaginationDto,
+    filterDto: ContactFilterDto,
   ): Promise<PaginatedResponse<ContactMessage>> {
     if (currentUser.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admins can view contact messages');
     }
 
-    const params = this.getPaginationParams(paginationDto);
+    const {
+      page = 1,
+      limit = 10,
+      is_resolved,
+      search,
+      sort,
+      order = 'DESC',
+    } = filterDto;
+    const skip = (page - 1) * limit;
 
-    const [messages, total] = await this.contactMessageRepository.findAndCount({
-      relations: ['user'],
-      skip: params.skip,
-      take: params.take,
-      order: { createdAt: 'DESC' },
-    });
+    const queryBuilder = this.contactMessageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.user', 'user');
+
+    // Apply filters
+    if (typeof is_resolved === 'boolean') {
+      queryBuilder.andWhere('message.is_resolved = :is_resolved', { is_resolved });
+    }
+
+    // Apply search
+    if (search) {
+      queryBuilder.andWhere(
+        '(message.name ILIKE :search OR message.email ILIKE :search OR message.subject ILIKE :search OR message.message ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Apply sorting
+    if (sort) {
+      queryBuilder.orderBy(`message.${sort}`, order);
+    } else {
+      queryBuilder.orderBy('message.createdAt', 'DESC');
+    }
+
+    // Get paginated results
+    const [messages, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     return {
       data: messages,
       meta: {
         total,
-        page: params.page,
-        limit: params.limit,
-        totalPages: Math.ceil(total / params.limit),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
     };
   }

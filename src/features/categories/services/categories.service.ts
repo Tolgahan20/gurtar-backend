@@ -7,6 +7,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, Not } from 'typeorm';
 import { Category } from '../entities/category.entity';
 import { CreateCategoryDto } from '../dto/create-category.dto';
+import { CategoryFilterDto } from '../dto/category-filter.dto';
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
 
 @Injectable()
 export class CategoriesService {
@@ -15,12 +26,64 @@ export class CategoriesService {
     private readonly categoryRepository: Repository<Category>,
   ) {}
 
-  async findAll(): Promise<Category[]> {
-    // Get only top-level categories (parent_id is null)
-    return this.categoryRepository.find({
-      where: { parent_id: IsNull() },
-      order: { name: 'ASC' },
-    });
+  async findAll(
+    filterDto: CategoryFilterDto,
+  ): Promise<PaginatedResponse<Category>> {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      parent_id,
+      sort,
+      order = 'ASC',
+      include_subcategories = false,
+    } = filterDto;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.categoryRepository.createQueryBuilder('category');
+
+    // Include relationships if requested
+    if (include_subcategories) {
+      queryBuilder.leftJoinAndSelect('category.subcategories', 'subcategories');
+    }
+
+    // Apply parent filter
+    if (parent_id) {
+      queryBuilder.where('category.parent_id = :parent_id', { parent_id });
+    } else {
+      queryBuilder.where('category.parent_id IS NULL');
+    }
+
+    // Apply search
+    if (search) {
+      queryBuilder.andWhere(
+        '(category.name ILIKE :search OR category.description ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Apply sorting
+    if (sort) {
+      queryBuilder.orderBy(`category.${sort}`, order);
+    } else {
+      queryBuilder.orderBy('category.name', 'ASC');
+    }
+
+    // Get paginated results
+    const [categories, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: categories,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findSubcategories(categoryId: string): Promise<Category[]> {

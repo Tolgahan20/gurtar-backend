@@ -5,6 +5,7 @@ import { User } from '../../users/entities/user.entity';
 export enum AdminActionType {
   SUSPEND_BUSINESS = 'suspend_business',
   DELETE_USER = 'delete_user',
+  BAN_USER = 'ban_user',
   VERIFY_BUSINESS = 'verify_business',
   RESOLVE_CONTACT = 'resolve_contact',
 }

@@ -6,21 +6,33 @@ import {
   Delete,
   Body,
   Param,
-  ParseUUIDPipe,
   UseGuards,
+  ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiParam,
   ApiBearerAuth,
+  ApiParam,
 } from '@nestjs/swagger';
 import { JwtBlacklistGuard } from '../../auth/guards/jwt-blacklist.guard';
 import { AdminGuard } from '../../admin/guards/admin.guard';
 import { CategoriesService } from '../services/categories.service';
 import { Category } from '../entities/category.entity';
 import { CreateCategoryDto } from '../dto/create-category.dto';
+import { CategoryFilterDto } from '../dto/category-filter.dto';
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
 
 @ApiTags('Categories')
 @Controller({ path: 'categories', version: '1' })
@@ -28,18 +40,20 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all top-level categories' })
+  @ApiOperation({ summary: 'Get all categories with filtering and sorting' })
   @ApiResponse({
     status: 200,
-    description: 'Returns list of categories',
+    description: 'Returns filtered and sorted list of categories',
     type: [Category],
   })
-  async findAll(): Promise<Category[]> {
-    return this.categoriesService.findAll();
+  async findAll(
+    @Query() filterDto: CategoryFilterDto,
+  ): Promise<PaginatedResponse<Category>> {
+    return this.categoriesService.findAll(filterDto);
   }
 
   @Get(':id/subcategories')
-  @ApiOperation({ summary: 'Get all subcategories of a category' })
+  @ApiOperation({ summary: 'Get subcategories of a category' })
   @ApiParam({
     name: 'id',
     description: 'Category ID',
@@ -61,7 +75,7 @@ export class CategoriesController {
   @Post()
   @UseGuards(JwtBlacklistGuard, AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new category' })
+  @ApiOperation({ summary: 'Create a new category (Admin)' })
   @ApiResponse({
     status: 201,
     description: 'Category created successfully',
@@ -79,7 +93,7 @@ export class CategoriesController {
   @Put(':id')
   @UseGuards(JwtBlacklistGuard, AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a category' })
+  @ApiOperation({ summary: 'Update a category (Admin)' })
   @ApiParam({
     name: 'id',
     description: 'Category ID',
@@ -105,7 +119,7 @@ export class CategoriesController {
   @Delete(':id')
   @UseGuards(JwtBlacklistGuard, AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete a category' })
+  @ApiOperation({ summary: 'Delete a category (Admin)' })
   @ApiParam({
     name: 'id',
     description: 'Category ID',
@@ -113,10 +127,7 @@ export class CategoriesController {
     format: 'uuid',
   })
   @ApiResponse({ status: 200, description: 'Category deleted successfully' })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request - Category has dependencies',
-  })
+  @ApiResponse({ status: 400, description: 'Bad request - Has dependencies' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
   @ApiResponse({ status: 404, description: 'Category not found' })
