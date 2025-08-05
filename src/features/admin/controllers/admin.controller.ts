@@ -27,6 +27,7 @@ import { Business } from '../../businesses/entities/business.entity';
 import { AdminLog } from '../entities/admin-log.entity';
 import { Pagination } from '../../common/decorators/pagination.decorator';
 import { UserFilterDto } from '../dto/user-filter.dto';
+import { BusinessFilterDto } from '../dto/business-filter.dto';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -86,24 +87,22 @@ export class AdminController {
   }
 
   @Get('businesses')
-  @ApiOperation({ summary: 'Get all businesses' })
-  @ApiQuery({ type: PaginationDto })
+  @ApiOperation({ summary: 'Get all businesses with filtering and sorting' })
   @ApiResponse({
     status: 200,
-    description: 'Returns list of businesses',
+    description: 'Returns filtered and sorted list of businesses',
     type: [Business],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
   async getBusinesses(
-    @Pagination() pagination: PaginationDto,
+    @Query() filterDto: BusinessFilterDto,
   ): Promise<PaginatedResponse<Business>> {
-    const result = await this.adminService.getBusinesses(pagination);
-    return result;
+    return this.adminService.getBusinesses(filterDto);
   }
 
   @Patch('businesses/:id/verify')
-  @ApiOperation({ summary: 'Verify/unverify a business' })
+  @ApiOperation({ summary: 'Verify/unverify business' })
   @ApiParam({
     name: 'id',
     description: 'Business ID',
@@ -122,12 +121,30 @@ export class AdminController {
     @GetUser() admin: User,
     @Body() dto: AdminLogDto,
   ): Promise<{ message: string; business: Business }> {
-    const result = await this.adminService.verifyBusiness(
-      id,
-      admin,
-      dto.reason,
-    );
-    return result;
+    return this.adminService.verifyBusiness(id, admin, dto.reason);
+  }
+
+  @Patch('businesses/:id/toggle-status')
+  @ApiOperation({ summary: 'Activate/deactivate business' })
+  @ApiParam({
+    name: 'id',
+    description: 'Business ID',
+    type: 'string',
+    format: 'uuid',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Business activated/deactivated successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
+  @ApiResponse({ status: 404, description: 'Business not found' })
+  async toggleBusinessStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser() admin: User,
+    @Body() dto: AdminLogDto,
+  ): Promise<{ message: string; business: Business }> {
+    return this.adminService.toggleBusinessStatus(id, admin, dto.reason);
   }
 
   @Get('logs')

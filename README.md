@@ -506,6 +506,29 @@ GET /api/v1/admin/users?role=admin&is_banned=false
 GET /api/v1/admin/users?search=john&sort=email&order=asc
 ```
 
+#### `GET /api/v1/admin/businesses`
+List all businesses with filtering, sorting, and searching capabilities (admin only).
+```typescript
+interface BusinessFilterDto extends PaginationDto {
+  // Filtering
+  is_verified?: boolean;
+  is_active?: boolean;
+  city?: string;
+  
+  // Searching
+  search?: string; // Searches in name, description, email, and city
+  
+  // Sorting
+  sort?: 'createdAt' | 'name' | 'city' | 'is_verified';
+  order?: 'ASC' | 'DESC';
+}
+
+// Example requests:
+GET /api/v1/admin/businesses?page=1&limit=10
+GET /api/v1/admin/businesses?is_verified=true&city=Istanbul
+GET /api/v1/admin/businesses?search=cafe&sort=name&order=asc
+```
+
 #### `PATCH /api/v1/admin/users/:id/ban`
 Ban/unban user (admin only).
 ```typescript
@@ -514,11 +537,21 @@ interface AdminLogDto {
 }
 ```
 
-#### `GET /api/v1/admin/businesses`
-List all businesses (admin only).
-
 #### `PATCH /api/v1/admin/businesses/:id/verify`
 Verify/unverify business (admin only).
+```typescript
+interface AdminLogDto {
+  reason: string;
+}
+```
+
+#### `PATCH /api/v1/admin/businesses/:id/toggle-status`
+Activate/deactivate business (admin only). This endpoint provides functionality similar to banning a business.
+```typescript
+interface AdminLogDto {
+  reason: string;
+}
+```
 
 #### `GET /api/v1/admin/logs`
 Get admin action logs (admin only).
@@ -533,6 +566,11 @@ interface AdminLog {
   created_at: Date;
 }
 ```
+
+### Business Status Management
+Businesses have two status flags that can be managed by admins:
+- `is_verified`: Indicates that the admin has reviewed and approved the business
+- `is_active`: Controls whether the business can operate (similar to a ban feature)
 
 ## 📨 Contact
 

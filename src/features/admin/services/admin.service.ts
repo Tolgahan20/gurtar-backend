@@ -15,6 +15,7 @@ import {
 } from '../entities/admin-log.entity';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UserFilterDto } from '../dto/user-filter.dto';
+import { BusinessFilterDto } from '../dto/business-filter.dto';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -139,25 +140,102 @@ export class AdminService {
   }
 
   async getBusinesses(
-    paginationDto: PaginationDto,
+    filterDto: BusinessFilterDto,
   ): Promise<PaginatedResponse<Business>> {
-    const params = this.getPaginationParams(paginationDto);
+    const {
+      page = 1,
+      limit = 10,
+      is_verified,
+      is_active,
+      search,
+      city,
+      sort,
+      order = 'DESC',
+    } = filterDto;
+    const skip = (page - 1) * limit;
 
-    const [businesses, total] = await this.businessRepository.findAndCount({
-      skip: params.skip,
-      take: params.take,
-      order: { createdAt: 'DESC' },
-      relations: ['owner'],
-    });
+    const queryBuilder = this.businessRepository
+      .createQueryBuilder('business')
+      .leftJoinAndSelect('business.owner', 'owner');
+
+    // Apply filters
+    if (typeof is_verified === 'boolean') {
+      queryBuilder.andWhere('business.is_verified = :is_verified', {
+        is_verified,
+      });
+    }
+
+    if (typeof is_active === 'boolean') {
+      queryBuilder.andWhere('business.is_active = :is_active', { is_active });
+    }
+
+    if (city) {
+      queryBuilder.andWhere('business.city ILIKE :city', { city: `%${city}%` });
+    }
+
+    // Apply search
+    if (search) {
+      queryBuilder.andWhere(
+        '(business.name ILIKE :search OR business.description ILIKE :search OR business.email ILIKE :search OR business.city ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Apply sorting
+    if (sort) {
+      queryBuilder.orderBy(`business.${sort}`, order);
+    } else {
+      queryBuilder.orderBy('business.createdAt', 'DESC');
+    }
+
+    // Get paginated results
+    const [businesses, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     return {
       data: businesses,
       meta: {
         total,
-        page: params.page,
-        limit: params.limit,
-        totalPages: Math.ceil(total / params.limit),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async toggleBusinessStatus(
+    businessId: string,
+    admin: User,
+    reason: string,
+  ): Promise<{ message: string; business: Business }> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['owner'],
+    });
+
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    // Toggle active status
+    business.is_active = !business.is_active;
+    const savedBusiness = await this.businessRepository.save(business);
+
+    // Log the action
+    const adminLog = this.adminLogRepository.create({
+      admin,
+      action_type: AdminActionType.SUSPEND_BUSINESS,
+      target_type: AdminTargetType.BUSINESS,
+      target_id: businessId,
+      description: `${business.is_active ? 'Activated' : 'Deactivated'} business: ${reason}`,
+    });
+    await this.adminLogRepository.save(adminLog);
+
+    return {
+      message: `Business ${savedBusiness.is_active ? 'activated' : 'deactivated'} successfully`,
+      business: savedBusiness,
     };
   }
 
