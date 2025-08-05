@@ -45,4 +45,7 @@ export class LogFilterDto extends PaginationDto {
   @Transform(({ value }: { value: string }) => value?.toUpperCase())
   @IsString()
   order?: 'ASC' | 'DESC' = 'DESC';
+  action?: { action: any };
+  admin_id?: { admin_id: any };
+  target_id?: { target_id: any };
 }

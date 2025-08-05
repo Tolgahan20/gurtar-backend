@@ -8,6 +8,7 @@ import {
   Body,
   Query,
   Res,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,6 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Response } from 'express';
+import { Workbook } from 'exceljs';
 import { JwtBlacklistGuard } from '../../auth/guards/jwt-blacklist.guard';
 import { AdminService } from '../services/admin.service';
 import { GetUser } from '../../auth/decorators/get-user.decorator';
@@ -110,7 +112,14 @@ export class AdminController {
       }
 
       case 'excel': {
-        const workbook = await this.adminService.generateExcelReport(stats);
+        const result = await this.adminService.exportDashboardStats(
+          'excel',
+          start,
+          end,
+        );
+        if (!(result instanceof Workbook)) {
+          throw new BadRequestException('Failed to generate Excel workbook');
+        }
         res.setHeader(
           'Content-Type',
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -119,12 +128,19 @@ export class AdminController {
           'Content-Disposition',
           `attachment; filename=${filename}.xlsx`,
         );
-        await workbook.xlsx.write(res);
+        await result.xlsx.write(res);
         break;
       }
 
       default: {
-        const csv = await this.adminService.generateCsvReport(stats);
+        const csv = await this.adminService.exportDashboardStats(
+          'csv',
+          start,
+          end,
+        );
+        if (typeof csv !== 'string') {
+          throw new BadRequestException('Failed to generate CSV');
+        }
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader(
           'Content-Disposition',

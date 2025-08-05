@@ -105,7 +105,7 @@ The admin dashboard provides comprehensive statistics and real-time monitoring c
 #### User Statistics
 - Total, active, and inactive users
 - User retention rate and growth trends
-- Average login frequency
+- Average login frequency (placeholder for future implementation)
 - User engagement metrics
 - Banned user count
 
@@ -115,7 +115,11 @@ The admin dashboard provides comprehensive statistics and real-time monitoring c
 - Business distribution by city
 - Average response times
 - Performance metrics
+  - Order count by business
+  - Revenue by business
+  - Response time by business
 - Growth trends
+- CO2 and money savings tracking
 
 #### Order Statistics
 - Total orders placed
@@ -123,6 +127,7 @@ The admin dashboard provides comprehensive statistics and real-time monitoring c
 - Average order values
 - Growth trends
 - Seasonal patterns
+- CO2 and money savings per order
 
 #### Environmental Impact
 - Total CO2 emissions saved (platform-wide)
@@ -135,6 +140,32 @@ The admin dashboard provides comprehensive statistics and real-time monitoring c
 - Response time metrics
 - Satisfaction trends
 - Rating distribution
+
+### Recent Updates
+
+#### Statistics Service Improvements (August 2025)
+1. Enhanced Type Safety
+   - Added proper TypeScript interfaces for all statistics DTOs
+   - Improved error handling in statistics calculations
+   - Added type checking for database query results
+
+2. Performance Optimizations
+   - Implemented caching for dashboard statistics
+   - Optimized database queries for better performance
+   - Added proper SQL query parameter handling
+
+3. Code Organization
+   - Separated statistics logic into dedicated services:
+     - UserStatisticsService
+     - BusinessStatisticsService
+     - OrderStatisticsService
+     - CategoryStatisticsService
+     - ContactStatisticsService
+
+4. Future Enhancements
+   - Login tracking system planned for better user engagement metrics
+   - Enhanced seasonal trend analysis
+   - More detailed CO2 impact tracking
 
 ### Dashboard Endpoints
 

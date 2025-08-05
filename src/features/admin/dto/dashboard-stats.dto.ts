@@ -132,10 +132,10 @@ export class CityStats {
     percentage: number;
   }>;
 
-  @ApiProperty({ description: 'Most active cities by user count' })
-  mostActiveByUsers!: Array<{
+  @ApiProperty({ description: 'Most active cities by business count' })
+  mostActiveByBusinesses!: Array<{
     city: string;
-    userCount: number;
+    businessCount: number;
     percentage: number;
   }>;
 
