@@ -25,9 +25,11 @@ import { PaginationDto } from '../../common/dto/pagination.dto';
 import { AdminLogDto } from '../dto/admin-log.dto';
 import { Business } from '../../businesses/entities/business.entity';
 import { AdminLog } from '../entities/admin-log.entity';
-import { Pagination } from '../../common/decorators/pagination.decorator';
 import { UserFilterDto } from '../dto/user-filter.dto';
 import { BusinessFilterDto } from '../dto/business-filter.dto';
+import { LogFilterDto } from '../dto/log-filter.dto';
+import { BusinessOrdersFilterDto } from '../dto/business-orders-filter.dto';
+import { Order } from '../../orders/entities/order.entity';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -148,19 +150,40 @@ export class AdminController {
   }
 
   @Get('logs')
-  @ApiOperation({ summary: 'Get admin action logs' })
-  @ApiQuery({ type: PaginationDto })
+  @ApiOperation({ summary: 'Get admin action logs with filtering and sorting' })
   @ApiResponse({
     status: 200,
-    description: 'Returns list of admin logs',
+    description: 'Returns filtered and sorted list of admin logs',
     type: [AdminLog],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
   async getLogs(
-    @Pagination() pagination: PaginationDto,
+    @Query() filterDto: LogFilterDto,
   ): Promise<PaginatedResponse<AdminLog>> {
-    const result = await this.adminService.getLogs(pagination);
-    return result;
+    return this.adminService.getLogs(filterDto);
+  }
+
+  @Get('businesses/:id/orders')
+  @ApiOperation({ summary: 'Get business orders with filtering and sorting' })
+  @ApiParam({
+    name: 'id',
+    description: 'Business ID',
+    type: 'string',
+    format: 'uuid',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns filtered and sorted list of business orders',
+    type: [Order],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not an admin' })
+  @ApiResponse({ status: 404, description: 'Business not found' })
+  async getBusinessOrders(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() filterDto: BusinessOrdersFilterDto,
+  ): Promise<PaginatedResponse<Order>> {
+    return this.adminService.getBusinessOrders(id, filterDto);
   }
 }

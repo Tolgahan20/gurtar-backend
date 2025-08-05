@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { UserRole } from '../../users/entities/user-role.enum';
 import { Business } from '../../businesses/entities/business.entity';
+import { Order } from '../../orders/entities/order.entity';
 import {
   AdminLog,
   AdminActionType,
@@ -16,6 +17,8 @@ import {
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UserFilterDto } from '../dto/user-filter.dto';
 import { BusinessFilterDto } from '../dto/business-filter.dto';
+import { LogFilterDto } from '../dto/log-filter.dto';
+import { BusinessOrdersFilterDto } from '../dto/business-orders-filter.dto';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -36,6 +39,8 @@ export class AdminService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(AdminLog)
     private readonly adminLogRepository: Repository<AdminLog>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
   ) {}
 
   private getPaginationParams(dto: PaginationDto) {
@@ -273,25 +278,110 @@ export class AdminService {
     };
   }
 
-  async getLogs(
-    paginationDto: PaginationDto,
-  ): Promise<PaginatedResponse<AdminLog>> {
-    const params = this.getPaginationParams(paginationDto);
+  async getLogs(filterDto: LogFilterDto): Promise<PaginatedResponse<AdminLog>> {
+    const {
+      page = 1,
+      limit = 10,
+      action_type,
+      target_type,
+      search,
+      sort,
+      order = 'DESC',
+    } = filterDto;
+    const skip = (page - 1) * limit;
 
-    const [logs, total] = await this.adminLogRepository.findAndCount({
-      skip: params.skip,
-      take: params.take,
-      order: { createdAt: 'DESC' },
-      relations: ['admin'],
-    });
+    const queryBuilder = this.adminLogRepository
+      .createQueryBuilder('log')
+      .leftJoinAndSelect('log.admin', 'admin');
+
+    // Apply filters
+    if (action_type) {
+      queryBuilder.andWhere('log.action_type = :action_type', { action_type });
+    }
+
+    if (target_type) {
+      queryBuilder.andWhere('log.target_type = :target_type', { target_type });
+    }
+
+    // Apply search
+    if (search) {
+      queryBuilder.andWhere('log.description ILIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    // Apply sorting
+    if (sort) {
+      queryBuilder.orderBy(`log.${sort}`, order);
+    } else {
+      queryBuilder.orderBy('log.createdAt', 'DESC');
+    }
+
+    // Get paginated results
+    const [logs, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     return {
       data: logs,
       meta: {
         total,
-        page: params.page,
-        limit: params.limit,
-        totalPages: Math.ceil(total / params.limit),
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getBusinessOrders(
+    businessId: string,
+    filterDto: BusinessOrdersFilterDto,
+  ): Promise<PaginatedResponse<Order>> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
+
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const { page = 1, limit = 10, status, sort, order = 'DESC' } = filterDto;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.package', 'package')
+      .leftJoinAndSelect('order.picked_up_by_worker', 'worker')
+      .leftJoinAndSelect('package.business', 'business')
+      .where('business.id = :businessId', { businessId });
+
+    // Apply filters
+    if (status) {
+      queryBuilder.andWhere('order.status = :status', { status });
+    }
+
+    // Apply sorting
+    if (sort) {
+      queryBuilder.orderBy(`order.${sort}`, order);
+    } else {
+      queryBuilder.orderBy('order.createdAt', 'DESC');
+    }
+
+    // Get paginated results
+    const [orders, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: orders,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
     };
   }

@@ -529,6 +529,59 @@ GET /api/v1/admin/businesses?is_verified=true&city=Istanbul
 GET /api/v1/admin/businesses?search=cafe&sort=name&order=asc
 ```
 
+#### `GET /api/v1/admin/businesses/:id/orders`
+Get all orders for a specific business with filtering and sorting capabilities (admin only).
+```typescript
+interface BusinessOrdersFilterDto extends PaginationDto {
+  // Filtering
+  status?: 'pending' | 'confirmed' | 'picked_up' | 'cancelled';
+  
+  // Sorting
+  sort?: 'createdAt' | 'status' | 'total_price' | 'quantity';
+  order?: 'ASC' | 'DESC';
+}
+
+// Response includes:
+interface Order {
+  id: string;
+  quantity: number;
+  total_price: number;
+  money_saved: number;
+  co2_saved_kg: number;
+  status: OrderStatus;
+  user: User;           // Customer details
+  package: Package;     // Package details
+  picked_up_by_worker?: User; // Worker who handled pickup
+}
+
+// Example requests:
+GET /api/v1/admin/businesses/:id/orders?page=1&limit=10
+GET /api/v1/admin/businesses/:id/orders?status=pending
+GET /api/v1/admin/businesses/:id/orders?sort=total_price&order=desc
+```
+
+#### `GET /api/v1/admin/logs`
+Get admin action logs with filtering, sorting, and searching capabilities (admin only).
+```typescript
+interface LogFilterDto extends PaginationDto {
+  // Filtering
+  action_type?: 'VERIFY_BUSINESS' | 'SUSPEND_BUSINESS' | /* other actions */;
+  target_type?: 'USER' | 'BUSINESS' | /* other targets */;
+  
+  // Searching
+  search?: string; // Searches in description
+  
+  // Sorting
+  sort?: 'createdAt' | 'action_type' | 'target_type';
+  order?: 'ASC' | 'DESC';
+}
+
+// Example requests:
+GET /api/v1/admin/logs?page=1&limit=10
+GET /api/v1/admin/logs?action_type=VERIFY_BUSINESS
+GET /api/v1/admin/logs?search=verification&sort=createdAt&order=desc
+```
+
 #### `PATCH /api/v1/admin/users/:id/ban`
 Ban/unban user (admin only).
 ```typescript
@@ -550,20 +603,6 @@ Activate/deactivate business (admin only). This endpoint provides functionality 
 ```typescript
 interface AdminLogDto {
   reason: string;
-}
-```
-
-#### `GET /api/v1/admin/logs`
-Get admin action logs (admin only).
-```typescript
-interface AdminLog {
-  id: string;
-  admin: User;
-  action_type: string;
-  target_type: string;
-  target_id: string;
-  description: string;
-  created_at: Date;
 }
 ```
 
